@@ -80,8 +80,6 @@ const egal = (set, arr) => set.size === arr.length && arr.every(k => set.has(k))
 const nbF = (D, f) => D.filter(d => !d.x && d.f === f).length;
 
 function de(p, d, k) {
-  const cache = p === 1 && etape < 5;
-  if (cache) return `<button class="de" disabled aria-label="dé caché">?</button>`;
   const libre = p === 0 && (etape === 2 || etape === 3) && !lock[k];
   const cl = ['de', d.g && 'or', p === 0 && etape < 5 && lock[k] && 'fixe', libre && 'libre', libre && REQ[etape].includes(k) && 'conseil', libre && selKeep.has(k) && 'sel'].filter(Boolean).join(' ');
   return `<button class="${cl}" ${libre ? `onclick="bascule(${k})"` : 'disabled'} title="${NOM[d.f]}${d.g ? ' (jeton)' : ''}">${ico(d.f)}</button>`;
@@ -113,7 +111,7 @@ function bulle() {
       </table>
       <p>Une face à <b>bordure dorée en pointillés</b> te rapporte aussi 1 jeton de faveur. Les jetons servent à payer les faveurs divines.</p>` + suivant();
     case 2: return `<h2>Premier lancer</h2>
-      <p>Tu as lancé tes 6 dés. Tu peux relancer jusqu'à 3 fois, en <b>gardant au moins un dé</b> à chaque fois. Les dés gardés sont verrouillés pour la manche.</p>
+      <p>Tu as lancé tes 6 dés. Tu peux relancer jusqu'à 3 fois, en <b>gardant au moins un dé</b> à chaque fois. Les dés gardés sont verrouillés pour la manche. Tu vois aussi les dés du Gardien : aucun dé n'est caché.</p>
       <p>Garde les <b>deux haches</b>, le <b>casque doré</b> et la <b>main dorée</b> : ce sont les dés entourés. Touche-les, puis valide.</p>`
       + garder(2, 'Garde les dés entourés pour suivre le tutoriel.');
     case 3: return `<h2>Deuxième lancer</h2>
@@ -123,7 +121,7 @@ function bulle() {
       <p>Ton dernier dé est devenu une hache. Ta combinaison finale : <b>${nbF(D, 'a')} haches</b>, <b>${nbF(D, 'f')} flèche</b>, <b>${nbF(D, 'h')} casque</b> et <b>${nbF(D, 'm')} main</b>, avec <b>3 faces dorées</b>.</p>` + suivant();
     case 5: { const O = S.dice[1];
       return `<h2>Les dés du Gardien</h2>
-      <p>Il a lancé en même temps que toi : <b>${nbF(O, 'a')} haches</b>, <b>${nbF(O, 'f')} flèches</b>, <b>${nbF(O, 'h')} casque</b>, <b>${nbF(O, 'm')} main</b>.</p>
+      <p>Les dés de chaque joueur sont visibles par l'adversaire dès le départ. Le Gardien a lancé en même temps que toi : <b>${nbF(O, 'a')} haches</b>, <b>${nbF(O, 'f')} flèches</b>, <b>${nbF(O, 'h')} casque</b>, <b>${nbF(O, 'm')} main</b>.</p>
       <p>Tes ${nbF(D, 'a')} haches affrontent son casque : il en bloque 1, donc ${nbF(D, 'a') - nbF(O, 'h')} passent. Ta flèche n'est pas bloquée, il n'a aucun bouclier.</p>` + suivant();
     }
     case 6: {
