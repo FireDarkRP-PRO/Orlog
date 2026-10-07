@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orlog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600&family=Cinzel:wght@600;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="Ressource/style.css">
+</head>
+<body>
+  <main class="cadre">
+    <h1>Orlog</h1>
+    <p class="sous">Le jeu de dés viking d'Assassin's Creed Valhalla</p>
+    <div class="filet"></div>
+    <nav class="menu">
+      <a class="choix" href="Orlog/salon.html"><b>Multijoueur</b>Affronte un ami : crée un salon ou rejoins-en un avec un code.</a>
+      <a class="choix" href="Orlog/solo.html"><b>Solo</b>Affronte l'IA dans les trois modes de jeu.</a>
+      <a class="choix" href="Orlog/tutoriel.html"><b>Tutoriel</b>Apprends à jouer en une manche guidée.</a>
+      <a class="choix" href="Orlog/regles.html"><b>Règles</b>Les dés, le déroulé d'une manche et les modes de jeu.</a>
+      <button class="choix" onclick="document.getElementById('modalFaveurs').showModal()"><b>Faveurs divines</b>Les 20 faveurs, leurs coûts et leurs effets.</button>
+    </nav>
+  </main>
+
+  <dialog id="modalFaveurs" aria-labelledby="titreFaveurs">
+    <h2 id="titreFaveurs">Les 20 faveurs divines</h2>
+    <p>Chaque faveur a 3 paliers de coût en jetons. Elles sont résolues par priorité, de 1 à 7.</p>
+    <div id="listeFaveurs"></div>
+    <p style="text-align:center"><button class="btn" onclick="document.getElementById('modalFaveurs').close()">Fermer</button></p>
+  </dialog>
+  <script src="Ressource/orlog.js"></script>
+  <script>
+    let h = '', pr = 0;
+    Object.entries(Orlog.FAV).forEach(([id, f]) => {
+      if (f[0] !== pr) { pr = f[0]; h += `<div class="prio">Priorité ${pr}</div>`; }
+      h += `<table class="tab"><tr><th colspan="2">${f[1]}</th></tr>` + [1, 2, 3].map(t =>
+        `<tr><td>Palier ${['I', 'II', 'III'][t - 1]} (${f[2][t - 1]} jetons)</td><td>${Orlog.texte(id, t)}</td></tr>`).join('') + '</table>';
+    });
+    document.getElementById('listeFaveurs').innerHTML = h;
+  </script>
+</body>
+</html>
