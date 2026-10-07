@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orlog - Salon multijoueur</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600&family=Cinzel:wght@600;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../Ressource/style.css">
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <a class="lien" href="../index.html" style="top:14px">Retour</a>
+  <a class="lien" href="./regles.html" style="top:60px">Règles</a>
+
+  <main class="cadre">
+    <h2>Salon multijoueur</h2>
+    <p class="sous">Un salon, une partie entre deux joueurs.</p>
+    <div class="filet"></div>
+
+    <div id="choixMode" class="modes">
+      <button class="btn" onclick="choisirMode('creer')">Créer un salon</button>
+      <button class="btn sec" onclick="choisirMode('rejoindre')">Rejoindre un salon</button>
+    </div>
+
+    <div id="zoneCreer" hidden>
+      <button class="retour" onclick="retourChoix()">Changer de mode</button>
+      <div class="carte">
+        <label for="modeJeu">Mode de jeu</label>
+        <select id="modeJeu">
+          <option value="debutant">Débutant</option>
+          <option value="casual">Casual</option>
+          <option value="expert">Expert</option>
+        </select>
+        <p><button id="creerBtn" class="btn" onclick="creerSalon()">Créer le salon</button></p>
+        <div id="salonInfo"></div>
+      </div>
+    </div>
+
+    <div id="zoneRejoindre" hidden>
+      <button class="retour" onclick="retourChoix()">Changer de mode</button>
+      <div class="carte">
+        <label for="codeInput">Code donné par l'autre joueur</label>
+        <input type="text" id="codeInput" maxlength="5" placeholder="CODE" autocomplete="off">
+        <p><button id="rejoindreBtn" class="btn" onclick="rejoindreSalon()">Rejoindre</button></p>
+        <p id="statutRejoindre" class="statut"></p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const PREFIXE = 'orlog-';
+    let peer = null, conn = null;
+    const $ = id => document.getElementById(id);
+
+    function montrer(zone) {
+      ['choixMode', 'zoneCreer', 'zoneRejoindre'].forEach(z => { $(z).hidden = z !== zone; });
+    }
+    function choisirMode(m) { montrer(m === 'creer' ? 'zoneCreer' : 'zoneRejoindre'); }
+    function retourChoix() {
+      if (peer) peer.destroy();
+      peer = conn = null;
+      $('salonInfo').innerHTML = '';
+      $('statutRejoindre').textContent = '';
+      $('codeInput').value = '';
+      $('creerBtn').disabled = $('rejoindreBtn').disabled = false;
+      montrer('choixMode');
+    }
+    function statut(id, texte, classe) {
+      const e = $(id); if (!e) return;
+      e.textContent = texte; e.className = 'statut ' + classe;
+    }
+
+    // ---------- Hôte ----------
+    function genererCode() {
+      const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans caractères ambigus
+      return Array.from({ length: 5 }, () => c[Math.floor(Math.random() * c.length)]).join('');
+    }
+
+    function creerSalon() {
+      $('creerBtn').disabled = true;
+      const code = genererCode();
+      $('salonInfo').innerHTML = '<p class="statut statut-attente">Création du salon…</p>';
+      if (peer) peer.destroy();
+      peer = new Peer(PREFIXE + code);
+
+      peer.on('open', () => afficherSalon(code));
+
+      peer.on('connection', c => {
+        // Un salon = 2 joueurs : toute connexion supplémentaire est refusée.
+        if (conn && conn.open) { c.on('open', () => c.close()); return; }
+        conn = c;
+        c.on('open', () => {
+          statut('statutSalon', 'Un joueur a rejoint le salon.', 'statut-connecte');
+          ajouterLancer(code);
+        });
+        c.on('close', () => {
+          conn = null;
+          statut('statutSalon', `Le joueur 2 s'est déconnecté. En attente sur le code ${code}…`, 'statut-attente');
+          const b = $('lancerBtn'); if (b) b.remove();
+        });
+      });
+
+      peer.on('error', e => {
+        console.error(e);
+        if (e.type === 'unavailable-id') { creerSalon(); return; } // code déjà pris : on en tire un autre
+        $('salonInfo').innerHTML = '<p class="statut statut-erreur">Impossible de créer le salon. Vérifie ta connexion et réessaie.</p>';
+        $('creerBtn').disabled = false;
+      });
+    }
+
+    function afficherSalon(code) {
+      $('salonInfo').innerHTML = `
+        <p>Communique ce code à l'autre joueur :</p>
+        <div class="code">${code}</div>
+        <button id="copierBtn" class="btn sec" onclick="copierCode('${code}')">Copier le code</button>
+        <p id="statutSalon" class="statut statut-attente">En attente d'un joueur…</p>`;
+    }
+
+    function copierCode(code) {
+      navigator.clipboard.writeText(code).then(() => {
+        const b = $('copierBtn'), t = b.textContent;
+        b.textContent = 'Copié'; setTimeout(() => { b.textContent = t; }, 1500);
+      });
+    }
+
+    function ajouterLancer(code) {
+      if ($('lancerBtn')) return;
+      const b = document.createElement('button');
+      b.id = 'lancerBtn'; b.className = 'btn'; b.textContent = 'Lancer la partie';
+      b.style.marginTop = '14px';
+      b.onclick = () => lancerPartie(code);
+      $('salonInfo').appendChild(b);
+    }
+
+    function lancerPartie(code) {
+      if (!conn || !conn.open) return;
+      const mode = $('modeJeu').value;
+      conn.send({ type: 'lancerPartie', mode });
+      sessionStorage.setItem('mp_role', 'hote');
+      sessionStorage.setItem('mp_code', code);
+      sessionStorage.setItem('mp_mode', mode);
+      // Petit délai pour laisser partir le message avant de quitter la page.
+      setTimeout(() => { location.href = './multi.html'; }, 300);
+    }
+
+    // ---------- Joueur 2 ----------
+    $('codeInput').addEventListener('input', e => {
+      e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    });
+    $('codeInput').addEventListener('keydown', e => { if (e.key === 'Enter') rejoindreSalon(); });
+
+    function rejoindreSalon() {
+      const code = $('codeInput').value.trim();
+      if (!code) { statut('statutRejoindre', 'Entre un code avant de rejoindre.', 'statut-erreur'); return; }
+      $('rejoindreBtn').disabled = true;
+      statut('statutRejoindre', 'Connexion en cours…', 'statut-attente');
+      if (peer) peer.destroy();
+      peer = new Peer();
+
+      peer.on('open', () => {
+        conn = peer.connect(PREFIXE + code, { reliable: true });
+        conn.on('open', () => statut('statutRejoindre', `Connecté au salon ${code}. En attente du lancement par l'hôte…`, 'statut-connecte'));
+        conn.on('data', d => {
+          if (d && d.type === 'lancerPartie') {
+            sessionStorage.setItem('mp_role', 'joueur');
+            sessionStorage.setItem('mp_code', code);
+            sessionStorage.setItem('mp_mode', d.mode || 'debutant');
+            location.href = './multi.html';
+          }
+        });
+        conn.on('close', () => {
+          statut('statutRejoindre', "La connexion avec l'hôte a été coupée.", 'statut-erreur');
+          $('rejoindreBtn').disabled = false;
+        });
+        conn.on('error', () => {
+          statut('statutRejoindre', 'Impossible de se connecter à ce salon.', 'statut-erreur');
+          $('rejoindreBtn').disabled = false;
+        });
+      });
+
+      peer.on('error', e => {
+        console.error(e);
+        statut('statutRejoindre', e.type === 'peer-unavailable'
+          ? 'Aucun salon trouvé avec ce code. Vérifie-le et réessaie.'
+          : 'Erreur de connexion. Vérifie ta connexion internet et réessaie.', 'statut-erreur');
+        $('rejoindreBtn').disabled = false;
+      });
+    }
+  </script>
+</body>
+</html>

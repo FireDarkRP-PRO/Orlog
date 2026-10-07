@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orlog - Règles</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600&family=Cinzel:wght@600;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../Ressource/style.css">
+  <script src="../Ressource/orlog.js"></script>
+  <style>
+    .regles{max-width:800px;text-align:left}
+    .regles h1{text-align:center}
+    .regles h2{margin-top:30px;color:var(--teal)}
+    .regles table{width:100%;border-collapse:collapse;margin:10px 0}
+    .regles th,.regles td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--or)}
+    .regles li{margin:4px 0}
+    .prio{margin:18px 0 6px;font:600 1.1rem 'Cinzel',Georgia,serif}
+  </style>
+</head>
+<body>
+  <a class="lien" href="../index.html" style="top:14px">Accueil</a>
+  <main class="cadre regles">
+    <h1>Règles</h1>
+    <p class="sous" style="text-align:center">Deux joueurs s'affrontent à coups de dés et de faveurs divines. Le premier qui réduit la santé de l'adversaire à 0 gagne.</p>
+    <div class="filet"></div>
+
+    <h2>Les dés</h2>
+    <p>Chaque joueur a 6 dés. Chaque dé porte 2 haches, 1 casque, 1 flèche, 1 bouclier et 1 main, dont deux faces à bordure dorée en pointillés.</p>
+    <table>
+      <tr><th>Face</th><th>Effet</th></tr>
+      <tr><td>Hache</td><td>Inflige 1 dégât, bloqué par un casque.</td></tr>
+      <tr><td>Casque</td><td>Bloque 1 hache.</td></tr>
+      <tr><td>Flèche</td><td>Inflige 1 dégât, bloqué par un bouclier.</td></tr>
+      <tr><td>Bouclier</td><td>Bloque 1 flèche.</td></tr>
+      <tr><td>Main</td><td>Vole 1 jeton de faveur à l'adversaire (rien s'il n'en a plus).</td></tr>
+      <tr><td>Bordure dorée</td><td>Donne 1 jeton de faveur à celui qui l'a lancée.</td></tr>
+    </table>
+
+    <h2>Une manche</h2>
+    <ol>
+      <li><b>Lancers.</b> Les deux joueurs lancent leurs 6 dés en même temps, jusqu'à 3 lancers. Après chaque lancer, tu gardes au moins 1 dé, qui est alors verrouillé pour la manche. Les autres sont relancés. Les dés du 3ᵉ lancer sont définitifs.</li>
+      <li><b>Faveurs divines.</b> Chacun choisit en secret une faveur et un palier, ou aucune, et paie les jetons. Les choix sont révélés ensemble. Une seule faveur par joueur et par manche.</li>
+      <li><b>Résolution.</b> Les jetons des faces dorées sont gagnés, puis les mains volent. Ensuite les faveurs de priorité 1 à 5 s'appliquent, puis le combat, puis les priorités 6 et 7.</li>
+    </ol>
+    <p>Le combat est séquentiel : le premier joueur attaque, puis le second. Dégâts = haches moins casques adverses, plus flèches moins boucliers adverses (jamais en dessous de 0). Le premier joueur change à chaque manche. Les jetons restent d'une manche à l'autre et tu commences à 0 jeton.</p>
+    <p>Les points de vie sont vérifiés après chaque attaque et après chaque priorité de faveur. Un joueur à 0 PV ou moins perd tout de suite. Si les deux tombent à 0 en même temps, c'est la <b>mort subite</b> : les deux joueurs repartent à 1 PV, avec leurs jetons.</p>
+
+    <h2>Les modes</h2>
+    <ul>
+      <li><b>Débutant.</b> 15 PV, faveurs imposées : Frappe de Thor, Rajeunissement d'Idunn et Jugement d'Odin.</li>
+      <li><b>Casual.</b> 15 PV, chaque joueur choisit 3 faveurs parmi les 20.</li>
+      <li><b>Expert.</b> 15 PV, un seul jeu de 20 faveurs partagé. Le gagnant du tirage bannit une faveur, l'autre en bannit une et choisit en premier, puis chacun choisit à tour de rôle jusqu'à en avoir 3. Après chaque partie, de nouvelles faveurs sont choisies parmi celles qui restent, le gagnant choisissant en premier. Il faut gagner 2 parties sur 3.</li>
+    </ul>
+
+    <h2>Les 20 faveurs divines</h2>
+    <p>Chaque faveur a 3 paliers de coût en jetons. Les faveurs sont résolues par priorité, de 1 à 7. Un palier réduit à 0 par Thrymr annule la faveur. Les soins ne dépassent jamais 15 PV.</p>
+    <div id="faveurs"></div>
+
+    <p style="text-align:center;margin-top:30px"><a class="btn" style="text-decoration:none;display:inline-block" href="../index.html">Retour à l'accueil</a></p>
+  </main>
+  <script>
+    const NOMS = ['I', 'II', 'III'];
+    let h = '', pr = 0;
+    Object.entries(Orlog.FAV).forEach(([id, f]) => {
+      if (f[0] !== pr) { pr = f[0]; h += `<div class="prio">Priorité ${pr}</div>`; }
+      h += `<table><tr><th colspan="2">${f[1]}</th></tr>` + [1, 2, 3].map(t =>
+        `<tr><td style="width:150px">Palier ${NOMS[t - 1]} (${f[2][t - 1]} jetons)</td><td>${Orlog.texte(id, t)}</td></tr>`).join('') + '</table>';
+    });
+    document.getElementById('faveurs').innerHTML = h;
+  </script>
+</body>
+</html>

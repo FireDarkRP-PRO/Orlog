@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orlog - Tutoriel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600&family=Cinzel:wght@600;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../Ressource/style.css">
+  <script src="../Ressource/orlog.js"></script>
+  <style>
+    .jeu{max-width:860px}
+    .joueur{margin:14px 0;padding:12px;text-align:left;background:var(--parchemin);border:2px solid var(--or)}
+    .entete{display:flex;justify-content:space-between;font-weight:600}
+    .pv{position:relative;height:24px;margin:6px 0;background:#3a2a26}
+    .pv i{position:absolute;inset:0 auto 0 0;background:var(--teal)}
+    .pv span{position:relative;padding-left:8px;color:#fff;font-weight:600}
+    .des{display:flex;flex-wrap:wrap;gap:8px;min-height:56px;margin-top:8px}
+    .de{width:52px;height:52px;padding:2px;color:var(--encre);font:900 1.5rem 'Cinzel',serif;background:#d9c6a0;border:3px solid var(--encre);cursor:default}
+    .de svg{display:block;width:100%;height:100%}
+    .de.or{border:3px dashed var(--or)}
+    .de.fixe{background:#c3b185}
+    .de.libre{cursor:pointer}
+    .de.conseil{box-shadow:0 0 0 4px var(--teal)}
+    .de.sel{outline:3px solid var(--nuit);transform:translateY(-4px)}
+    .bulle{margin:16px 0;padding:14px 18px;text-align:left;background:var(--parchemin);border:2px solid var(--teal);border-left-width:10px}
+    .bulle h2{margin:0 0 8px}
+    .bulle p{margin:6px 0}
+    .grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;text-align:left}
+    .fav{padding:8px;color:#e8dcc0;background:var(--nuit);border:2px solid var(--or)}
+    .fav small{display:block;opacity:.85}
+    .tiers{display:flex;gap:6px;margin-top:8px}
+    .tier{flex:1;padding:6px;color:#e8dcc0;font:inherit;background:var(--nuit);border:2px solid var(--or);cursor:pointer}
+    .tier.sel{background:var(--teal)}
+    .tier:disabled{opacity:.35;cursor:default}
+    .faces{width:100%;border-collapse:collapse}
+    .faces td{padding:4px 8px;border-bottom:1px solid var(--or)}
+    .faces svg{width:34px;height:34px;color:var(--encre);vertical-align:middle}
+    .actions{margin-top:12px;text-align:center}
+    .prog{margin:0;font-weight:600}
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="ic-a" viewBox="0 0 32 32"><path d="M8 29L21 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M15 9Q26 3 28 15Q22 12 18 15Z" fill="currentColor"/></symbol>
+    <symbol id="ic-h" viewBox="0 0 32 32"><path d="M5 19A11 11 0 0 1 27 19V28H21V22H11V28H5Z" fill="currentColor"/><path d="M16 8V17" stroke="#d9c6a0" stroke-width="2.5"/></symbol>
+    <symbol id="ic-f" viewBox="0 0 32 32"><path d="M5 27L24 8M5 27V20M5 27H12" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M28 4L19 6L26 13Z" fill="currentColor"/></symbol>
+    <symbol id="ic-s" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="16" cy="16" r="5" fill="currentColor"/></symbol>
+    <symbol id="ic-m" viewBox="0 0 32 32"><path d="M9 26V14M14 26V8M19 26V8M24 26V12M9 26H24M24 22L28 17" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" fill="none"/></symbol>
+  </defs></svg>
+
+  <a class="lien" href="../index.html" style="top:14px">Quitter</a>
+  <a class="lien" href="./regles.html" target="_blank" style="top:60px">Règles</a>
+
+  <main class="cadre jeu">
+    <h2>Tutoriel</h2>
+    <p id="prog" class="prog"></p>
+    <div id="jeu"></div>
+  </main>
+
+<script>
+const FAV = Orlog.FAV, $ = id => document.getElementById(id);
+const NOM = { a: 'Hache', h: 'Casque', f: 'Flèche', s: 'Bouclier', m: 'Main' };
+const ico = f => `<svg viewBox="0 0 32 32" aria-hidden="true"><use href="#ic-${f}"/></svg>`;
+const mk = ks => ks.map((k, i) => ({ i, ...Orlog.DES[i][k], v: false, x: false }));
+const FIN = 8;                                   // dernière étape
+const REQ = { 2: [0, 3, 4, 5], 3: [2] };         // dés à garder aux lancers 1 et 2 (scénario du tutoriel)
+
+let etape, S, lock, selKeep, selFav, res;
+
+function init() {
+  S = { hp: [15, 15], tok: [5, 2], first: 0, manche: 1, mortSubite: false,
+        dice: [mk([0, 5, 5, 2, 0, 5]), mk([4, 2, 0, 3, 2, 0])] };   // dés des deux joueurs, scénarisés
+  lock = Array(6).fill(false); selKeep = new Set(); selFav = null; res = null; etape = 0;
+  render();
+}
+
+const egal = (set, arr) => set.size === arr.length && arr.every(k => set.has(k));
+const nbF = (D, f) => D.filter(d => !d.x && d.f === f).length;
+
+function de(p, d, k) {
+  const cache = p === 1 && etape < 5;
+  if (cache) return `<button class="de" disabled aria-label="dé caché">?</button>`;
+  const libre = p === 0 && (etape === 2 || etape === 3) && !lock[k];
+  const cl = ['de', d.g && 'or', p === 0 && etape < 5 && lock[k] && 'fixe', libre && 'libre', libre && REQ[etape].includes(k) && 'conseil', libre && selKeep.has(k) && 'sel'].filter(Boolean).join(' ');
+  return `<button class="${cl}" ${libre ? `onclick="bascule(${k})"` : 'disabled'} title="${NOM[d.f]}${d.g ? ' (jeton)' : ''}">${ico(d.f)}</button>`;
+}
+
+function panneau(p, nom) {
+  const hp = S.hp[p];
+  return `<section class="joueur"><div class="entete"><span>${nom}</span></div>
+    <div class="pv"><i style="width:${hp / Orlog.PV_MAX * 100}%"></i><span>${hp} PV</span></div>
+    <div>${S.tok[p]} jeton(s) de faveur</div>
+    <div class="des">${S.dice[p].map((d, k) => de(p, d, k)).join('')}</div></section>`;
+}
+
+const suivant = (t = 'Suivant') => `<div class="actions"><button class="btn" onclick="etape++;selKeep=new Set();render()">${t}</button></div>`;
+
+function bulle() {
+  const D = S.dice[0];
+  switch (etape) {
+    case 0: return `<h2>Bienvenue, guerrier</h2>
+      <p>Orlog est un duel de dés. Chaque joueur a <b>15 points de vie</b> (PV) : le premier à tomber à 0 perd.</p>
+      <p>Une manche se joue en trois temps : les <b>lancers</b>, les <b>faveurs divines</b>, puis la <b>résolution</b>. Tu vas jouer une manche guidée contre le Gardien.</p>` + suivant('Commencer');
+    case 1: return `<h2>Les faces des dés</h2>
+      <table class="faces">
+        <tr><td>${ico('a')}</td><td><b>Hache</b> : inflige 1 dégât.</td></tr>
+        <tr><td>${ico('h')}</td><td><b>Casque</b> : bloque 1 hache.</td></tr>
+        <tr><td>${ico('f')}</td><td><b>Flèche</b> : inflige 1 dégât.</td></tr>
+        <tr><td>${ico('s')}</td><td><b>Bouclier</b> : bloque 1 flèche.</td></tr>
+        <tr><td>${ico('m')}</td><td><b>Main</b> : vole 1 jeton de faveur à l'adversaire.</td></tr>
+      </table>
+      <p>Une face à <b>bordure dorée en pointillés</b> te rapporte aussi 1 jeton de faveur. Les jetons servent à payer les faveurs divines.</p>` + suivant();
+    case 2: return `<h2>Premier lancer</h2>
+      <p>Tu as lancé tes 6 dés. Tu peux relancer jusqu'à 3 fois, en <b>gardant au moins un dé</b> à chaque fois. Les dés gardés sont verrouillés pour la manche.</p>
+      <p>Garde les <b>deux haches</b>, le <b>casque doré</b> et la <b>main dorée</b> : ce sont les dés entourés. Touche-les, puis valide.</p>`
+      + garder(2, 'Garde les dés entourés pour suivre le tutoriel.');
+    case 3: return `<h2>Deuxième lancer</h2>
+      <p>Les deux autres dés ont été relancés. Tu obtiens une <b>flèche</b> et une <b>flèche dorée</b>.</p>
+      <p>Garde la flèche dorée (entourée) : elle te rapportera un jeton. Relance l'autre.</p>` + garder(3, 'Garde uniquement le dé entouré.');
+    case 4: return `<h2>Troisième lancer : le résultat est définitif</h2>
+      <p>Ton dernier dé est devenu une hache. Ta combinaison finale : <b>${nbF(D, 'a')} haches</b>, <b>${nbF(D, 'f')} flèche</b>, <b>${nbF(D, 'h')} casque</b> et <b>${nbF(D, 'm')} main</b>, avec <b>3 faces dorées</b>.</p>` + suivant();
+    case 5: { const O = S.dice[1];
+      return `<h2>Les dés du Gardien</h2>
+      <p>Il a lancé en même temps que toi : <b>${nbF(O, 'a')} haches</b>, <b>${nbF(O, 'f')} flèches</b>, <b>${nbF(O, 'h')} casque</b>, <b>${nbF(O, 'm')} main</b>.</p>
+      <p>Tes ${nbF(D, 'a')} haches affrontent son casque : il en bloque 1, donc ${nbF(D, 'a') - nbF(O, 'h')} passent. Ta flèche n'est pas bloquée, il n'a aucun bouclier.</p>` + suivant();
+    }
+    case 6: {
+      const T = { tok: S.tok, dice: S.dice };
+      const cartes = ['thor', 'idunn', 'odin'].map(id => `<div class="fav"><b>${FAV[id][1]}</b><small>Priorité ${FAV[id][0]}</small>
+        <small>${selFav && selFav.id === id ? Orlog.texte(id, selFav.t) : 'Choisis un palier'}</small>
+        <div class="tiers">${[1, 2, 3].map(t => `<button class="tier ${selFav && selFav.id === id && selFav.t === t ? 'sel' : ''}" ${Orlog.peutChoisir(T, 0, id, t) ? '' : 'disabled'}
+          onclick="bFav('${id}',${t})" title="${Orlog.texte(id, t)}">${['I', 'II', 'III'][t - 1]} (${Orlog.cout(id, t)})</button>`).join('')}</div></div>`).join('');
+      const bon = selFav && selFav.id === 'thor' && selFav.t === 1;
+      return `<h2>Les faveurs divines</h2>
+        <p>Tu as <b>5 jetons</b>. Chaque faveur a 3 paliers : plus on paie, plus l'effet est fort. Les paliers trop chers sont grisés. Le Gardien choisit en secret, comme toi.</p>
+        <p>Invoque la <b>Frappe de Thor</b> au palier I : 4 jetons pour 2 dégâts directs, qui ne peuvent pas être bloqués.</p>
+        <div class="grille">${cartes}</div>
+        ${selFav && !bon ? `<p><i>Pour ce tutoriel, choisis la Frappe de Thor, palier I.</i></p>` : ''}
+        <div class="actions"><button class="btn" ${bon ? '' : 'disabled'} onclick="resoudre()">Invoquer la Frappe de Thor</button></div>`;
+    }
+    case 7: return `<h2>La résolution</h2>
+      <p>Les deux joueurs révèlent leurs faveurs, puis tout se règle dans cet ordre :</p>
+      <ol class="journal" style="max-width:none">${res.log.map(l => `<li>${l.replace(/J1/g, 'Toi').replace(/J2/g, 'Le Gardien')}</li>`).join('')}</ol>
+      <p>Tes 3 faces dorées t'ont rapporté des jetons, et vos mains se sont volé 1 jeton chacune. Ensuite le combat : le premier joueur attaque, puis le second. Enfin ta Frappe de Thor a fini le travail, après le combat.</p>
+      <p>Résultat : tu es à <b>${S.hp[0]} PV</b> et le Gardien à <b>${S.hp[1]} PV</b>. La manche suivante, l'autre joueur attaquera en premier.</p>` + suivant();
+    default: return `<h2>À toi de jouer</h2>
+      <p>Tu connais maintenant le cœur du jeu. Les manches s'enchaînent, avec les jetons que tu gardes d'une manche à l'autre, jusqu'à ce qu'un joueur tombe à 0 PV. Si les deux tombent en même temps, c'est la mort subite : les deux joueurs repartent à 1 PV.</p>
+      <p>Il existe trois modes : <b>Débutant</b> (faveurs imposées), <b>Casual</b> (3 faveurs au choix) et <b>Expert</b> (bannissements, repêchage, 2 parties gagnantes sur 3).</p>
+      <div class="actions"><a class="btn" style="text-decoration:none;display:inline-block" href="./salon.html">Jouer en multijoueur</a>
+      <button class="btn sec" onclick="init()">Rejouer le tutoriel</button></div>`;
+  }
+}
+
+function garder(e, aide) {
+  const ok = egal(selKeep, REQ[e]);
+  return `${selKeep.size && !ok ? `<p><i>${aide}</i></p>` : ''}
+    <div class="actions"><button class="btn" ${ok ? '' : 'disabled'} onclick="valider()">Garder ces dés</button></div>`;
+}
+
+function render() {
+  $('prog').textContent = `Étape ${etape + 1} sur ${FIN + 1}`;
+  $('jeu').innerHTML = panneau(1, 'Le Gardien') + `<div class="bulle">${bulle()}</div>` + panneau(0, 'Toi');
+}
+
+/* ===== Actions ===== */
+function bascule(k) { selKeep.has(k) ? selKeep.delete(k) : selKeep.add(k); render(); }
+
+function valider() {                              // verrouille les dés gardés, relance les autres (résultats scénarisés)
+  selKeep.forEach(k => { lock[k] = true; });
+  selKeep = new Set();
+  if (etape === 2) { Object.assign(S.dice[0][1], Orlog.DES[1][2]); Object.assign(S.dice[0][2], Orlog.DES[2][1]); }   // flèche, flèche dorée
+  else { Object.assign(S.dice[0][1], Orlog.DES[1][0]); lock = lock.map(() => true); }                                // hache : définitif
+  etape++; render();
+}
+
+function bFav(id, t) { selFav = selFav && selFav.id === id && selFav.t === t ? null : { id, t }; render(); }
+
+function resoudre() {                             // vrai moteur : mêmes règles que le jeu en ligne
+  res = Orlog.resoudre(S, [{ id: 'thor', t: 1, opt: {} }, null]);
+  S = res.S; etape = 7; render();
+}
+
+init();
+</script>
+</body>
+</html>

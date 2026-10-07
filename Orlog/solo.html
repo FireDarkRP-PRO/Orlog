@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orlog - Solo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600&family=Cinzel:wght@600;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../Ressource/style.css">
+  <script src="../Ressource/orlog.js"></script>
+  <style>
+    .jeu{max-width:860px}
+    .joueur{margin:14px 0;padding:12px;text-align:left;background:var(--parchemin);border:2px solid var(--or)}
+    .entete{display:flex;justify-content:space-between;font-weight:600}
+    .pv{position:relative;height:24px;margin:6px 0;background:#3a2a26}
+    .pv i{position:absolute;inset:0 auto 0 0;background:var(--teal)}
+    .pv span{position:relative;padding-left:8px;color:#fff;font-weight:600}
+    .des{display:flex;flex-wrap:wrap;gap:8px;min-height:56px;margin-top:8px}
+    .de{width:52px;height:52px;padding:2px;color:var(--encre);background:#d9c6a0;border:3px solid var(--encre);cursor:default}
+    .de svg{display:block;width:100%;height:100%}
+    .de.or{border:3px dashed var(--or)}
+    .de.virt{border-style:dotted}
+    .de.dead{opacity:.25}
+    .de.fixe{background:#c3b185}
+    .de.libre{cursor:pointer}
+    .de.sel{outline:3px solid var(--teal);transform:translateY(-4px)}
+    .zone{margin:16px 0}
+    .grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;text-align:left}
+    .fav{padding:8px;color:#e8dcc0;font:inherit;text-align:left;background:var(--nuit);border:2px solid var(--or);cursor:pointer}
+    .fav.sel{background:var(--teal)}
+    .fav small{display:block;opacity:.8}
+    .tiers{display:flex;gap:6px;margin-top:8px}
+    .tier{flex:1;padding:6px;color:#e8dcc0;font:inherit;background:var(--nuit);border:2px solid var(--or);cursor:pointer}
+    .tier.sel{background:var(--teal)}
+    .tier:disabled{opacity:.35;cursor:default}
+    .opt{margin:12px 0}
+    .opt .tier{flex:none;margin:0 3px;padding:4px 12px}
+    .journal{max-width:560px;margin:10px auto;padding-left:20px;text-align:left}
+    .vide{margin:6px;font-style:italic}
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="ic-a" viewBox="0 0 32 32"><path d="M8 29L21 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M15 9Q26 3 28 15Q22 12 18 15Z" fill="currentColor"/></symbol>
+    <symbol id="ic-h" viewBox="0 0 32 32"><path d="M5 19A11 11 0 0 1 27 19V28H21V22H11V28H5Z" fill="currentColor"/><path d="M16 8V17" stroke="#d9c6a0" stroke-width="2.5"/></symbol>
+    <symbol id="ic-f" viewBox="0 0 32 32"><path d="M5 27L24 8M5 27V20M5 27H12" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M28 4L19 6L26 13Z" fill="currentColor"/></symbol>
+    <symbol id="ic-s" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="16" cy="16" r="5" fill="currentColor"/></symbol>
+    <symbol id="ic-m" viewBox="0 0 32 32"><path d="M9 26V14M14 26V8M19 26V8M24 26V12M9 26H24M24 22L28 17" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" fill="none"/></symbol>
+  </defs></svg>
+
+  <a class="lien" href="../index.html" style="top:14px">Quitter</a>
+  <a class="lien" href="./regles.html" target="_blank" style="top:60px">Règles</a>
+
+  <main class="cadre jeu">
+    <h2 id="titre">Solo</h2>
+    <div id="choix" class="menu">
+      <p class="sous">Affronte l'IA. Choisis un mode de jeu.</p>
+      <button class="choix" onclick="demarrer('debutant')"><b>Débutant</b>Faveurs imposées : Thor, Idunn et Odin.</button>
+      <button class="choix" onclick="demarrer('casual')"><b>Casual</b>Chacun choisit 3 faveurs parmi les 20.</button>
+      <button class="choix" onclick="demarrer('expert')"><b>Expert</b>Bannissements, repêchage, 2 parties gagnantes sur 3.</button>
+    </div>
+    <div id="jeu"></div>
+  </main>
+
+<script>
+const FAV = Orlog.FAV, IDS = Object.keys(FAV), $ = id => document.getElementById(id);
+const PREF = ['thor', 'brunhild', 'vidar', 'ullr', 'idunn', 'heimdall', 'odin', 'frigg', 'loki', 'mimir', 'skuld', 'tyr', 'hel', 'baldr', 'bragi', 'skadi', 'var', 'freyr', 'thrymr', 'freyja'];
+const me = 0;                                   // toi = joueur 0, l'IA = joueur 1
+let mode = 'debutant', G = null, view = null, tia = null, cle = '';
+let selKeep = new Set(), selFav = null, selDeck = new Set(), selPick = null;
+
+/* ====== Arbitre local (mêmes règles que l'hôte du multijoueur) ====== */
+const libres = p => G.lock[p].map((l, k) => l ? -1 : k).filter(k => k >= 0);
+const pret = p => G.ready[p] || libres(p).length === 0;
+
+function demarrer(m) {
+  mode = m; $('choix').hidden = true;
+  G = { S: Orlog.nouvellePartie(), phase: 'deck', decks: [null, null], lock: [[], []], keep: [[], []], r: 1, ready: [0, 0], choix: [null, null], fait: [0, 0],
+        res: null, fin: null, wins: [0, 0], pool: [], queue: [] };
+  if (m === 'debutant') { G.decks = [['thor', 'idunn', 'odin'], ['thor', 'idunn', 'odin']]; nouvelleManche(); }
+  else if (m === 'expert') {
+    const w = Math.random() < .5 ? 0 : 1, l = 1 - w;
+    G.decks = [[], []]; G.pool = [...IDS];
+    G.queue = [{ p: w, t: 'ban' }, { p: l, t: 'ban' }, ...[l, w, l, w, l, w].map(p => ({ p, t: 'pick' }))];
+    G.phase = 'draft'; diffuser();
+  } else diffuser();
+}
+
+function nouvelleManche() {
+  G.S.dice = [Orlog.lancer(), Orlog.lancer()];
+  G.lock = [Array(6).fill(false), Array(6).fill(false)];
+  G.keep = [[], []]; G.r = 1; G.ready = [0, 0]; G.choix = [null, null]; G.fait = [0, 0]; G.res = null; G.phase = 'lancer';
+  diffuser();
+}
+
+function draftSuivant() {
+  const w = G.fin, l = 1 - w;
+  G.S = Orlog.nouvellePartie(); G.S.first = l; G.decks = [[], []]; G.fin = null; G.ready = [0, 0];
+  G.queue = [w, l, w, l, w, l].map(p => ({ p, t: 'pick' })); G.phase = 'draft';
+  diffuser();
+}
+
+function avancer() {
+  [0, 1].forEach(p => { G.keep[p].forEach(k => { G.lock[p][k] = true; }); G.keep[p] = []; });
+  G.ready = [0, 0];
+  const reste = () => [0, 1].some(p => libres(p).length > 0);
+  if (G.r < 3 && reste()) { [0, 1].forEach(p => Orlog.relancer(G.S.dice[p], libres(p))); G.r++; }
+  if (G.r === 3 || !reste()) { G.lock = G.lock.map(a => a.map(() => true)); G.phase = 'faveurs'; }
+  diffuser();
+}
+
+function resoudreManche() {
+  const r = Orlog.resoudre(G.S, G.choix);
+  G.res = { choix: G.choix, log: r.log };
+  G.S = r.S; G.fin = r.fin; G.ready = [0, 0];
+  if (r.fin === null) G.phase = 'resultat';
+  else if (mode === 'expert') { G.wins[r.fin]++; G.phase = G.wins[r.fin] >= 2 ? 'fin' : 'partie'; }
+  else G.phase = 'fin';
+  diffuser();
+}
+
+function handle(p, m) {
+  if (!G || !m) return;
+  if (m.t === 'deck' && G.phase === 'deck' && !G.decks[p]) {
+    const ids = [...new Set(m.ids)];
+    if (ids.length !== 3 || !ids.every(i => FAV[i])) return;
+    G.decks[p] = ids;
+    if (G.decks[0] && G.decks[1]) nouvelleManche(); else diffuser();
+  } else if (m.t === 'choisir' && G.phase === 'draft') {
+    const q = G.queue[0];
+    if (!q || q.p !== p || !G.pool.includes(m.id)) return;
+    G.pool = G.pool.filter(i => i !== m.id);
+    if (q.t === 'pick') G.decks[p].push(m.id);
+    G.queue.shift();
+    if (!G.queue.length) nouvelleManche(); else diffuser();
+  } else if (m.t === 'garder' && G.phase === 'lancer' && !pret(p)) {
+    const L = libres(p), idx = [...new Set(m.idx)].filter(k => L.includes(k));
+    if (!idx.length) return;
+    G.keep[p] = idx; G.ready[p] = 1;
+    if (pret(0) && pret(1)) avancer(); else diffuser();
+  } else if (m.t === 'faveur' && G.phase === 'faveurs' && !G.fait[p]) {
+    const c = m.c;
+    if (c && !(G.decks[p].includes(c.id) && Orlog.peutChoisir(G.S, p, c.id, c.t))) return;
+    G.choix[p] = c ? { id: c.id, t: c.t, opt: c.opt || {} } : null; G.fait[p] = 1;
+    if (G.fait[0] && G.fait[1]) resoudreManche(); else diffuser();
+  } else if (m.t === 'suite' && (G.phase === 'resultat' || G.phase === 'partie')) {
+    G.ready[p] = 1;
+    if (G.ready[0] && G.ready[1]) { if (G.phase === 'partie') draftSuivant(); else nouvelleManche(); } else diffuser();
+  }
+}
+
+/* ================= IA ================= */
+const shuffle = a => a.slice().sort(() => Math.random() - .5);
+
+function iaGarde() {                             // garde attaques, faces dorées, et les défenses utiles face aux dés adverses
+  const L = libres(1), D = G.S.dice[1], O = G.S.dice[0];
+  const oa = O.filter(d => d.f === 'a').length, of = O.filter(d => d.f === 'f').length;
+  let hh = D.filter((d, k) => G.lock[1][k] && d.f === 'h').length, hs = D.filter((d, k) => G.lock[1][k] && d.f === 's').length;
+  const K = L.filter(k => {
+    const d = D[k];
+    if (d.f === 'a' || d.f === 'f' || d.g) return true;
+    if (d.f === 'm') return G.S.tok[0] > 0;
+    if (d.f === 'h' && hh < oa) { hh++; return true; }
+    if (d.f === 's' && hs < of) { hs++; return true; }
+    return false;
+  });
+  return K.length ? K : [L[0]];
+}
+
+function iaFaveur() {                            // simule la manche pour chaque option (sans connaître la faveur du joueur)
+  const sim = c => {
+    const r = Orlog.resoudre(G.S, [null, c]);
+    if (r.fin === 1) return 100; if (r.fin === 0) return -100;
+    return (r.S.hp[1] - r.S.hp[0]) + 0.3 * (r.S.tok[1] - r.S.tok[0]);
+  };
+  let best = null, bs = sim(null);
+  G.decks[1].forEach(id => [1, 2, 3].forEach(t => {
+    if (!Orlog.peutChoisir(G.S, 1, id, t)) return;
+    const c = { id, t, opt: {} }, s = sim(c);
+    if (s > bs + 0.01) { bs = s; best = c; }
+  }));
+  return best;
+}
+
+function ia() {
+  clearTimeout(tia);
+  if (!G || G.phase === 'fin') return;
+  tia = setTimeout(() => {
+    const ph = G.phase, q = G.queue[0];
+    if (ph === 'deck' && !G.decks[1]) handle(1, { t: 'deck', ids: shuffle(PREF.slice(0, 12)).slice(0, 3) });
+    else if (ph === 'draft' && q && q.p === 1)
+      handle(1, { t: 'choisir', id: q.t === 'ban' ? (['thor', 'odin', 'tyr', 'brunhild'].find(i => G.pool.includes(i)) || G.pool[0]) : PREF.find(i => G.pool.includes(i)) });
+    else if (ph === 'lancer' && !pret(1)) handle(1, { t: 'garder', idx: iaGarde() });
+    else if (ph === 'faveurs' && !G.fait[1]) handle(1, { t: 'faveur', c: iaFaveur() });
+    else if ((ph === 'resultat' || ph === 'partie') && !G.ready[1]) handle(1, { t: 'suite' });
+  }, 800);
+}
+
+const vue = () => ({ me: 0, phase: G.phase, r: G.r, hp: G.S.hp, tok: G.S.tok, first: G.S.first, manche: G.S.manche, sd: G.S.mortSubite,
+  dice: G.S.dice, lock: G.lock, ready: G.ready, fait: G.fait, decks: G.decks, res: G.res, fin: G.fin, wins: G.wins, pool: G.pool, q: G.queue[0] || null });
+function diffuser() { view = vue(); render(); ia(); }
+
+/* ================= Affichage ================= */
+const ico = f => `<svg viewBox="0 0 32 32" aria-hidden="true"><use href="#ic-${f}"/></svg>`;
+const NOM = { a: 'Hache', h: 'Casque', f: 'Flèche', s: 'Bouclier', m: 'Main' };
+const cnt = (D, f) => D.filter(d => !d.x && d.f === f).length;
+
+function defOpt(id, t) {
+  const D = view.dice[0];
+  if (id === 'freyr') { const cs = [...'ahfsm'].map(f => [f, cnt(D, f)]), mx = Math.max(...cs.map(c => c[1])); return { face: cs.find(c => c[1] === mx)[0] }; }
+  if (id === 'tyr') return { n: cnt(D, 'h') + cnt(D, 's') };
+  if (id === 'frigg') return { idx: D.map((d, k) => !d.g && !d.v && !d.x ? k : -1).filter(k => k >= 0).slice(0, FAV.frigg[4][t - 1]) };
+  return {};
+}
+
+function de(v, p, d, k) {
+  const libre = p === 0 && v.phase === 'lancer' && !v.ready[0] && !v.lock[p][k];
+  const fr = p === 0 && v.phase === 'faveurs' && !v.fait[0] && selFav && selFav.id === 'frigg' && !d.g && !d.v && !d.x;
+  const sel = (libre && selKeep.has(k)) || (fr && selFav.opt.idx.includes(k));
+  const cl = ['de', d.g && 'or', d.v && 'virt', d.x && 'dead', v.lock[p][k] && v.phase === 'lancer' && 'fixe', (libre || fr) && 'libre', sel && 'sel'].filter(Boolean).join(' ');
+  const clic = libre ? `onclick="bascule(${k})"` : fr ? `onclick="bFriggDe(${k})"` : 'disabled';
+  return `<button class="${cl}" ${clic} title="${NOM[d.f]}${d.g ? ' (jeton)' : ''}">${ico(d.f)}</button>`;
+}
+
+function panneau(v, p, nom) {
+  const debut = (v.phase === 'lancer' || v.phase === 'faveurs') && v.first === p ? 'Attaque en premier' : '';
+  return `<section class="joueur"><div class="entete"><span>${nom}</span><span>${debut}</span></div>
+    <div class="pv"><i style="width:${Math.max(0, v.hp[p]) / Orlog.PV_MAX * 100}%"></i><span>${v.hp[p]} PV</span></div>
+    <div>${v.tok[p]} jeton(s) de faveur</div>
+    <div class="des">${v.dice[p].map((d, k) => de(v, p, d, k)).join('')}</div></section>`;
+}
+
+const nomFav = c => c ? `${FAV[c.id][1]} (palier ${c.t})` : 'aucune faveur';
+const attente = `<p class="vide">L'adversaire réfléchit…</p>`;
+const grille = (liste, sel, fn) => `<div class="grille">${liste.map(id => `<button class="fav ${sel(id) ? 'sel' : ''}" onclick="${fn}('${id}')">${FAV[id][1]}<small>Priorité ${FAV[id][0]}</small></button>`).join('')}</div>`;
+
+function options() {
+  if (!selFav) return '';
+  const { id, t, opt } = selFav, D = view.dice[0];
+  if (id === 'freyr') {
+    const cs = [...'ahfsm'].map(f => [f, cnt(D, f)]), mx = Math.max(...cs.map(c => c[1])), top = cs.filter(c => c[1] === mx).map(c => c[0]);
+    if (top.length < 2) return '';
+    return `<p class="opt">Égalité entre faces : choisis celle à ajouter ${top.map(f => `<button class="tier ${opt.face === f ? 'sel' : ''}" onclick="bOpt('face','${f}')">${NOM[f]}</button>`).join('')}</p>`;
+  }
+  if (id === 'tyr') {
+    const n = cnt(D, 'h') + cnt(D, 's');
+    return `<p class="opt">Dés de défense à sacrifier ${Array.from({ length: n + 1 }, (_, i) => `<button class="tier ${opt.n === i ? 'sel' : ''}" onclick="bOpt('n',${i})">${i}</button>`).join('')}</p>`;
+  }
+  if (id === 'frigg') return `<p class="opt">Touche jusqu'à ${FAV.frigg[4][t - 1]} de tes dés non dorés à relancer (${opt.idx.length} choisi(s)).</p>`;
+  return '';
+}
+
+function zone(v) {
+  const o = 1;
+  if (v.phase === 'deck') {
+    if (v.decks[0]) return attente;
+    return `<h2>Choisis 3 faveurs divines (${selDeck.size}/3)</h2>${grille(IDS, id => selDeck.has(id), 'bDeck')}
+      <p><button class="btn" ${selDeck.size === 3 ? '' : 'disabled'} onclick="bConfirmDeck()">Valider mes faveurs</button></p>`;
+  }
+  if (v.phase === 'draft') {
+    const mien = v.q && v.q.p === 0, ban = v.q && v.q.t === 'ban', liste = p => v.decks[p].map(i => FAV[i][1]).join(', ') || 'aucune';
+    const ent = `<p>Tes faveurs : ${liste(0)}<br>Adversaire : ${liste(o)}</p>`;
+    if (!mien) return ent + `<p class="vide">L'adversaire ${ban ? 'bannit' : 'choisit'} une faveur…</p>`;
+    return ent + `<h2>${ban ? 'Bannis une faveur' : 'Choisis une faveur'}</h2>${grille(v.pool, id => selPick === id, 'bPick')}
+      <p><button class="btn" ${selPick ? '' : 'disabled'} onclick="bConfirmPick()">${ban ? 'Bannir' : 'Choisir'}</button></p>`;
+  }
+  if (v.phase === 'lancer') {
+    if (v.ready[0] || !v.lock[0].some(l => !l)) return attente;
+    return `<h2>Lancer ${v.r} sur 3</h2><p>Touche les dés à garder${v.r < 3 ? ' : les autres seront relancés' : ''}. Au moins un dé.</p>
+      <button class="btn sec" onclick="bTout()">Tout garder</button>
+      <button class="btn" ${selKeep.size ? '' : 'disabled'} onclick="bGarder()">Garder ${selKeep.size} dé(s)</button>`;
+  }
+  if (v.phase === 'faveurs') {
+    if (v.fait[0]) return attente;
+    const S = { tok: v.tok, dice: v.dice };
+    const cartes = v.decks[0].map(id => `<div class="fav" style="cursor:default"><b>${FAV[id][1]}</b><small>Priorité ${FAV[id][0]}</small>
+      <small>${selFav && selFav.id === id ? Orlog.texte(id, selFav.t) : 'Choisis un palier'}</small>
+      <div class="tiers">${[1, 2, 3].map(t => `<button class="tier ${selFav && selFav.id === id && selFav.t === t ? 'sel' : ''}" ${Orlog.peutChoisir(S, 0, id, t) ? '' : 'disabled'}
+        title="${Orlog.texte(id, t)}" onclick="bFav('${id}',${t})">${['I', 'II', 'III'][t - 1]} (${Orlog.cout(id, t)})</button>`).join('')}</div></div>`).join('');
+    return `<h2>Invoque une faveur</h2><div class="grille">${cartes}</div>${options()}
+      <p><button class="btn" onclick="bValiderFav()">${selFav ? 'Invoquer ' + FAV[selFav.id][1] : 'Ne pas invoquer de faveur'}</button></p>`;
+  }
+  const j = v.res ? `<p>Toi : ${nomFav(v.res.choix[0])}. Adversaire : ${nomFav(v.res.choix[o])}.</p>
+    <ul class="journal">${v.res.log.map(l => `<li>${l.replace(/J(\d)/g, (x, n) => +n === 1 ? 'Toi' : 'Adversaire')}</li>`).join('')}</ul>` : '';
+  const exp = mode === 'expert', gagne = v.fin === 0;
+  if (v.phase === 'fin') return j + `<h2>${gagne ? (exp ? 'Match remporté !' : 'Victoire !') : (exp ? 'Match perdu.' : 'Défaite.')}</h2>
+    <p><button class="btn" onclick="location.reload()">Rejouer</button></p>`;
+  if (v.phase === 'partie') return j + `<h2>Partie ${gagne ? 'gagnée' : 'perdue'} : ${v.wins[0]} à ${v.wins[1]}</h2>` +
+    (v.ready[0] ? attente : `<button class="btn" onclick="bSuite()">Partie suivante : nouveau repêchage</button>`);
+  return j + (v.ready[0] ? attente : `<button class="btn" onclick="bSuite()">Manche suivante</button>`);
+}
+
+function render() {
+  const v = view; if (!v) return;
+  const k = v.phase + '|' + v.r + '|' + v.manche + '|' + v.pool.length;
+  if (k !== cle) { cle = k; selKeep = new Set(); selFav = null; selPick = null; }
+  const solo = v.phase === 'deck' || v.phase === 'draft';
+  $('titre').textContent = v.phase === 'deck' ? 'Choix des faveurs' : v.phase === 'draft' ? 'Draft des faveurs'
+    : `Manche ${v.manche}${v.sd ? ' (mort subite)' : ''}` + (mode === 'expert' ? `, score ${v.wins[0]} à ${v.wins[1]}` : '');
+  $('jeu').innerHTML = solo ? zone(v) : panneau(v, 1, 'Adversaire (IA)') + `<div class="zone">${zone(v)}</div>` + panneau(v, 0, 'Toi');
+}
+
+/* ================= Actions du joueur ================= */
+const envoyer = m => handle(0, m);
+function bascule(k) { selKeep.has(k) ? selKeep.delete(k) : selKeep.add(k); render(); }
+function bTout() { selKeep = new Set(view.lock[0].map((l, k) => l ? -1 : k).filter(k => k >= 0)); render(); }
+function bGarder() { envoyer({ t: 'garder', idx: [...selKeep] }); selKeep = new Set(); }
+function bDeck(id) { if (selDeck.has(id)) selDeck.delete(id); else if (selDeck.size < 3) selDeck.add(id); render(); }
+function bConfirmDeck() { envoyer({ t: 'deck', ids: [...selDeck] }); }
+function bPick(id) { selPick = selPick === id ? null : id; render(); }
+function bConfirmPick() { envoyer({ t: 'choisir', id: selPick }); selPick = null; }
+function bFav(id, t) { selFav = selFav && selFav.id === id && selFav.t === t ? null : { id, t, opt: defOpt(id, t) }; render(); }
+function bOpt(k2, val) { selFav.opt[k2] = val; render(); }
+function bFriggDe(k) {
+  const i = selFav.opt.idx, max = FAV.frigg[4][selFav.t - 1];
+  if (i.includes(k)) i.splice(i.indexOf(k), 1); else if (i.length < max) i.push(k);
+  render();
+}
+function bValiderFav() { envoyer({ t: 'faveur', c: selFav }); }
+function bSuite() { envoyer({ t: 'suite' }); }
+</script>
+</body>
+</html>
