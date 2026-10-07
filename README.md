@@ -31,7 +31,7 @@ Projet de fan, non affilié à Ubisoft. Les règles sont celles du livret « Orl
 ## Règles implémentées
 
 - Chaque joueur a 6 dés distincts (2 haches, 1 casque, 1 flèche, 1 bouclier, 1 main, dont 2 faces dorées).
-- **Lancers :** 3 lancers simultanés, au moins 1 dé gardé à chaque fois, les dés gardés sont verrouillés.
+- **Lancers :** 3 lancers simultanés, au moins 1 dé gardé à chaque fois, les dés gardés sont verrouillés. Les dés lancés sont visibles par les deux joueurs, mais les dés gardés ne sont révélés qu'au relancer, une fois que les deux ont validé. La faveur reste secrète jusqu'à la révélation.
 - **Faveurs :** choix secret d'une faveur et d'un palier (une seule par manche), puis révélation.
 - **Résolution :** jetons des faces dorées, vols de main, faveurs de priorité 1 à 5, combat séquentiel (le premier joueur attaque d'abord, il alterne à chaque manche), puis priorités 6 et 7.
 - Le test de mort a lieu après chaque attaque et chaque groupe de priorité. Si les deux joueurs tombent à 0 en même temps : **mort subite** (les deux repartent à 1 PV, jetons conservés).
@@ -47,7 +47,7 @@ Le détail complet, y compris les 20 faveurs, est dans `Orlog/regles.html` (gén
   - `resoudre(état, choix)` : résout une manche, renvoie `{ S, log, fin }` sans modifier l'état reçu ;
   - `FAV` (catalogue des faveurs), `texte()`, `cout()`.
   - L'état est un objet JSON, donc sérialisable et transmissible sur le réseau.
-- **Multijoueur :** l'hôte (joueur 1) arbitre la partie avec `orlog.js` et envoie à chaque joueur une vue où les choix secrets sont masqués. Le joueur 2 n'est qu'un client. La connexion passe par [PeerJS](https://peerjs.com/) et son serveur public gratuit.
+- **Multijoueur :** l'hôte (joueur 1) arbitre la partie avec `orlog.js` et envoie à chaque joueur une vue où les choix secrets (dés gardés, faveur) sont masqués avant leur révélation. Le joueur 2 n'est qu'un client. La connexion passe par [PeerJS](https://peerjs.com/) et son serveur public gratuit.
   - Délai de 60 s par décision, avec action automatique par défaut.
   - Un joueur 2 déconnecté plus de 30 s fait gagner l'hôte par abandon, et il se reconnecte automatiquement s'il le peut.
   - L'hôte garde l'état de la partie dans `sessionStorage` : recharger sa page reprend la partie.
