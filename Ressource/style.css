@@ -1,0 +1,45 @@
+:root{--pierre:#bdb9ae;--parchemin:#e4dfd2;--teal:#2b8a84;--nuit:#0f2e36;--or:#b8935a;--encre:#1c2224;--rouge:#9c3b2e}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;min-height:100vh;color:var(--encre);font:400 19px/1.4 'Barlow Condensed','Arial Narrow',sans-serif;text-align:center;
+  background:radial-gradient(ellipse at 18% 8%,#d6d2c8 0,transparent 55%),radial-gradient(ellipse at 88% 92%,#a7a499 0,transparent 50%),var(--pierre)}
+.cadre{max-width:720px;margin:64px auto 40px;padding:36px 28px;background:rgba(228,223,210,.8);border:3px double var(--teal);outline:1px solid var(--or);outline-offset:6px}
+h1{margin:0 0 6px;padding-left:.32em;color:var(--teal);font:900 clamp(2.4rem,10vw,4.6rem)/1 'Cinzel',Georgia,serif;letter-spacing:.32em}
+h2{margin:0 0 12px;font:600 1.3rem 'Cinzel',Georgia,serif}
+.sous{margin:0 0 6px;font-size:1.1rem}
+.filet{height:1px;max-width:360px;margin:22px auto;background:linear-gradient(90deg,transparent,var(--teal),transparent)}
+
+.menu{display:grid;gap:14px;max-width:440px;margin:0 auto}
+.choix{display:block;padding:16px 20px;color:#e8dcc0;text-align:left;text-decoration:none;background:var(--nuit);border:2px solid var(--or)}
+.choix b{display:block;font:600 1.25rem 'Cinzel',Georgia,serif;letter-spacing:.05em}
+a.choix:hover,a.choix:focus-visible{background:#15434b}
+.choix[aria-disabled=true]{opacity:.5}
+
+.btn{padding:.65em 1.6em;color:#e8dcc0;font:600 1.05rem 'Barlow Condensed','Arial Narrow',sans-serif;letter-spacing:.04em;background:var(--nuit);border:2px solid var(--or);cursor:pointer}
+.btn:hover,.btn:focus-visible{background:var(--teal)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sec{color:var(--nuit);background:transparent;border-color:var(--teal)}
+.btn.sec:hover{color:#e8dcc0}
+.modes{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-top:8px}
+.lien{position:fixed;left:14px;z-index:9;padding:8px 14px;color:#e8dcc0;font-weight:600;text-decoration:none;background:var(--nuit);border:2px solid var(--or)}
+.lien:hover{background:var(--teal)}
+.retour{margin-bottom:14px;color:var(--nuit);font:inherit;text-decoration:underline;background:none;border:0;cursor:pointer}
+
+.carte{max-width:340px;margin:12px auto 0;padding:22px;background:var(--parchemin);border:2px solid var(--or);box-shadow:0 3px 8px rgba(15,46,54,.3)}
+.code{margin:14px 0;padding:10px 10px 10px 22px;color:var(--teal);font:900 2.2rem 'Cinzel',Georgia,serif;letter-spacing:.3em;background:#d3cdbd}
+input,select{width:100%;max-width:240px;padding:9px;color:var(--encre);font:600 1.1rem 'Barlow Condensed','Arial Narrow',sans-serif;background:#f2eee3;border:2px solid var(--teal)}
+#codeInput{padding-left:.5em;font:900 1.7rem 'Cinzel',Georgia,serif;letter-spacing:.4em;text-align:center;text-transform:uppercase}
+label{display:block;margin-bottom:4px;font-weight:600}
+.statut{margin:16px 0 0;font-weight:600}
+.statut-attente{color:#8a6a1f}.statut-connecte{color:#1f6b3a}.statut-erreur{color:var(--rouge)}
+:focus-visible{outline:3px solid var(--or);outline-offset:2px}
+@media(max-width:520px){.cadre{margin:96px 12px 32px;padding:28px 16px}}
+
+button.choix{width:100%;font:inherit;cursor:pointer}
+button.choix:hover{background:#15434b}
+dialog{width:92%;max-width:760px;max-height:85vh;padding:22px;overflow:auto;color:var(--encre);text-align:left;background:var(--parchemin);border:3px double var(--teal);outline:1px solid var(--or);outline-offset:4px}
+dialog::backdrop{background:rgba(15,46,54,.72)}
+.prio{margin:18px 0 6px;font:600 1.1rem 'Cinzel',Georgia,serif;color:var(--teal)}
+.tab{width:100%;margin-bottom:8px;border-collapse:collapse}
+.tab th,.tab td{padding:5px 8px;text-align:left;border-bottom:1px solid var(--or)}
+.tab td:first-child{width:160px}
