@@ -9,7 +9,7 @@ const Anim = (() => {
   const FACES = ['a', 'h', 'f', 's', 'm'];
   const dort = ms => new Promise(r => setTimeout(r, ms));
   const centre = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
-  let deja = new Set(), nouveaux = [], snap = null, rk = '', session = 0;
+  let deja = new Set(), nouveaux = [], snap = null, rk = '', session = 0, actif = null;
 
   /* ---------- Lancer de dés ---------- */
   // Dit si le dé k du joueur p vient d'être (re)lancé et n'a pas encore été animé.
@@ -39,7 +39,7 @@ const Anim = (() => {
 
   /* ---------- Éléments flottants ---------- */
   function flotte(el, texte, couleur) {
-    if (!el) return;
+    if (!el || el.isConnected === false) return;
     const c = centre(el), d = document.createElement('div');
     d.className = 'popup'; d.textContent = texte; d.style.color = couleur;
     d.style.left = c.x + (Math.random() * 30 - 15) + 'px'; d.style.top = c.y + 'px';
@@ -48,6 +48,7 @@ const Anim = (() => {
   }
 
   function banniere(texte, panneau) {
+    if (!panneau || panneau.isConnected === false) return;
     const c = centre(panneau), d = document.createElement('div');
     d.className = 'banniere'; d.textContent = texte; d.style.left = c.x + 'px'; d.style.top = c.y + 'px';
     document.body.appendChild(d);
@@ -65,8 +66,19 @@ const Anim = (() => {
   };
 
   /* ---------- Combat ---------- */
+  // La page recrée ses éléments à chaque rendu (par exemple quand l'adversaire clique) : on relie alors
+  // l'animation en cours aux nouveaux éléments, sinon elle viserait des éléments détachés (coin en haut à gauche).
+  function lier(o) {
+    const ps = o.racine.querySelectorAll('.joueur');
+    if (ps.length < 2) return;
+    o.panneaux = { [1 - o.me]: ps[0], [o.me]: ps[1] };
+    o.barres = { 0: o.panneaux[0].querySelector('.pv'), 1: o.panneaux[1].querySelector('.pv') };
+    if (o.cur) [0, 1].forEach(p => setPV(o, p, o.cur[p]));
+  }
+  const relier = racine => { if (actif) { actif.racine = racine; lier(actif); } };
+
   async function tir(face, depuis, vers, bloque, delai) {          // un projectile : hache qui tourne, flèche qui vise
-    if (!depuis || !vers) return;
+    if (!depuis || !vers || depuis.isConnected === false || vers.isConnected === false) return;
     const a = centre(depuis), b = centre(vers), p = document.createElement('div');
     p.className = 'proj'; p.innerHTML = `<svg viewBox="0 0 32 32"><use href="#ic-${face}"/></svg>`;
     p.style.left = a.x - 18 + 'px'; p.style.top = a.y - 18 + 'px';
@@ -84,8 +96,9 @@ const Anim = (() => {
     const liste = (p, f) => D[p].map((x, k) => ({ x, k })).filter(e => !e.x.x && e.x.f === f);
     const els = p => o.panneaux[p].querySelectorAll('.de');
     const lot = (face, att, def) => att.map((e, j) => {
-      const bloque = j < def.length, cible = bloque ? els(d)[def[j].k] : o.barres[d];
-      return tir(face, els(a)[e.k], cible, bloque, j * 140).then(() => {
+      const bloque = j < def.length, vise = () => bloque ? els(d)[def[j].k] : o.barres[d];
+      return tir(face, els(a)[e.k], vise(), bloque, j * 140).then(() => {
+        const cible = vise();                                      // éléments relus : la page a pu être redessinée entre-temps
         if (id !== session || !cible) return;
         if (bloque) {                                               // casque ou bouclier : choc et « Bloqué »
           cible.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.35)', filter: 'brightness(1.7)' }, { transform: 'scale(1)' }], { duration: 340 });
@@ -102,9 +115,8 @@ const Anim = (() => {
   async function combat(o) {
     if (reduit) return;
     const id = ++session;
-    o.barres = { 0: o.panneaux[0].querySelector('.pv'), 1: o.panneaux[1].querySelector('.pv') };
-    o.cur = [...o.avant.hp];
-    [0, 1].forEach(p => setPV(o, p, o.cur[p]));                     // on repart des PV d'avant la manche
+    actif = o; o.cur = [...o.avant.hp];
+    lier(o);                                                        // on repart des PV d'avant la manche
     [0, 1].forEach(p => { const dt = o.apres.tok[p] - o.avant.tok[p]; if (dt) flotte(o.panneaux[p].querySelector('.jetons'), (dt > 0 ? '+' : '') + dt + ' jeton(s)', '#8a6a1f'); });
     o.faveurs.forEach(f => banniere(f.nom, o.panneaux[f.p]));
     await dort(o.faveurs.length ? 1500 : 400);
@@ -122,6 +134,7 @@ const Anim = (() => {
       });
     }
     [0, 1].forEach(p => setPV(o, p, o.apres.hp[p]));
+    if (actif === o) actif = null;
   }
 
   /* ---------- À appeler après chaque rendu (multi.html, solo.html) ---------- */
@@ -129,20 +142,21 @@ const Anim = (() => {
     nouveaux.forEach(a => deja.add(a)); nouveaux = [];
     lancer(racine);
     if (v.phase === 'lancer' || v.phase === 'faveurs') {
-      session++; document.querySelectorAll('.proj,.popup,.banniere').forEach(e => e.remove());
+      session++; actif = null; document.querySelectorAll('.proj,.popup,.banniere').forEach(e => e.remove());
       snap = { hp: [...v.hp], tok: [...v.tok], sd: v.sd };         // état d'avant résolution
       return;
     }
+    relier(racine);
     if (!['resultat', 'partie', 'fin'].includes(v.phase) || !v.res || !snap) return;
     const cle = v.wins[0] + v.wins[1] + '|' + v.manche + '|' + v.phase;
     if (cle === rk) return;                                         // déjà joué
     rk = cle;
     const ps = racine.querySelectorAll('.joueur'), panneaux = {};
     panneaux[1 - v.me] = ps[0]; panneaux[v.me] = ps[1];
-    combat({ panneaux, dice: v.dice, premier: 1 - v.first, avant: snap, apres: { hp: v.hp, tok: v.tok },
+    combat({ me: v.me, racine, panneaux, dice: v.dice, premier: 1 - v.first, avant: snap, apres: { hp: v.hp, tok: v.tok },
       faveurs: v.res.choix.map((c, p) => c && { p, nom: Orlog.FAV[c.id][1] + ' (palier ' + c.t + ')' }).filter(Boolean),
       fin: v.fin !== null, egalite: v.sd && !snap.sd });
   }
 
-  return { dePret, lancer, combat, apres };
+  return { dePret, lancer, combat, apres, relier };
 })();
