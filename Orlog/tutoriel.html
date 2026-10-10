@@ -163,6 +163,7 @@ function render() {
   if (etape === 2 && !vu2) { vu2 = true; animer = [0, 1, 2, 3, 4, 5]; animOpp = true; }   // premier lancer
   $('jeu').innerHTML = panneau(1, 'Le Gardien') + `<div class="bulle">${bulle()}</div>` + panneau(0, 'Toi');
   Anim.lancer($('jeu')); animer = []; animOpp = false;
+  Anim.relier($('jeu'));                                                    // l'animation de combat suit les éléments recréés
 }
 
 /* ===== Actions ===== */
@@ -184,7 +185,7 @@ function resoudre() {                             // vrai moteur : mêmes règle
   res = Orlog.resoudre(S, [{ id: 'thor', t: 1, opt: {} }, null]);
   S = res.S; etape = 7; render();
   const ps = $('jeu').querySelectorAll('.joueur');                          // animation du combat
-  Anim.combat({ panneaux: { 1: ps[0], 0: ps[1] }, dice: S.dice, premier: 0, avant, apres: { hp: S.hp, tok: S.tok },
+  Anim.combat({ me: 0, racine: $('jeu'), panneaux: { 1: ps[0], 0: ps[1] }, dice: S.dice, premier: 0, avant, apres: { hp: S.hp, tok: S.tok },
     faveurs: [{ p: 0, nom: 'Frappe de Thor (palier 1)' }], fin: false, egalite: false });
 }
 
