@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="../Ressource/style.css">
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="../Ressource/orlog.js"></script>
+  <script src="../Ressource/anim.js"></script>
   <style>
     .jeu{max-width:860px}
     .joueur{margin:14px 0;padding:12px;text-align:left;background:var(--parchemin);border:2px solid var(--or)}
@@ -131,7 +132,7 @@ function demarrer() {
 function nouvelleManche() {
   G.S.dice = [Orlog.lancer(), Orlog.lancer()];
   G.lock = [Array(6).fill(false), Array(6).fill(false)];
-  G.keep = [[], []]; G.r = 1; G.ready = [0, 0]; G.choix = [null, null]; G.fait = [0, 0]; G.res = null; G.phase = 'lancer';
+  G.keep = [[], []]; G.r = 1; G.ready = [0, 0]; G.choix = [null, null]; G.fait = [0, 0]; G.res = null; G.phase = 'lancer'; G.rel = [[0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5]];
   diffuser();
 }
 
@@ -146,7 +147,7 @@ function avancer() {
   [0, 1].forEach(p => { G.keep[p].forEach(k => { G.lock[p][k] = true; }); G.keep[p] = []; });
   G.ready = [0, 0];
   const reste = () => [0, 1].some(p => libres(p).length > 0);
-  if (G.r < 3 && reste()) { [0, 1].forEach(p => Orlog.relancer(G.S.dice[p], libres(p))); G.r++; }
+  if (G.r < 3 && reste()) { [0, 1].forEach(p => Orlog.relancer(G.S.dice[p], libres(p))); G.r++; G.rel = [libres(0), libres(1)]; }
   if (G.r === 3 || !reste()) { G.lock = G.lock.map(a => a.map(() => true)); G.phase = 'faveurs'; }
   diffuser();
 }
@@ -213,7 +214,7 @@ function auto() {
 // Vue envoyée à un joueur : les choix secrets (dés gardés, faveur) n'y figurent pas avant la révélation.
 const vue = p => ({ me: p, phase: G.phase, r: G.r, hp: G.S.hp, tok: G.S.tok, first: G.S.first, manche: G.S.manche, sd: G.S.mortSubite,
   dice: G.S.dice, lock: G.lock, ready: G.ready, fait: G.fait, decks: G.decks, res: G.res, fin: G.fin, wins: G.wins,
-  pool: G.pool, q: G.queue[0] || null, abandon: G.abandon, reste: dl - Date.now() });
+  pool: G.pool, q: G.queue[0] || null, abandon: G.abandon, rel: G.rel || [[], []], reste: dl - Date.now() });
 
 function diffuser() {
   try { sessionStorage.setItem(CLE, JSON.stringify(G)); } catch (e) {}
@@ -248,14 +249,15 @@ function de(v, p, d, k) {
   const sel = (libre && selKeep.has(k)) || (fr && selFav.opt.idx.includes(k));
   const cl = ['de', d.g && 'or', d.v && 'virt', d.x && 'dead', v.lock[p][k] && v.phase === 'lancer' && 'fixe', (libre || fr) && 'libre', sel && 'sel'].filter(Boolean).join(' ');
   const clic = libre ? `onclick="bascule(${k})"` : fr ? `onclick="bFriggDe(${k})"` : 'disabled';
-  return `<button class="${cl}" ${clic} title="${NOM[d.f]}${d.g ? ' (jeton)' : ''}">${ico(d.f)}</button>`;
+  const anim = Anim.dePret(v, p, k) ? `data-anim="${d.f}"` : '';
+  return `<button class="${cl}" ${clic} ${anim} title="${NOM[d.f]}${d.g ? ' (jeton)' : ''}">${ico(d.f)}</button>`;
 }
 
 function panneau(v, p, nom) {
   const debut = (v.phase === 'lancer' || v.phase === 'faveurs') && v.first === p ? 'Attaque en premier' : '';
   return `<section class="joueur"><div class="entete"><span>${nom}</span><span>${debut}</span></div>
     <div class="pv"><i style="width:${Math.max(0, v.hp[p]) / Orlog.PV_MAX * 100}%"></i><span>${v.hp[p]} PV</span></div>
-    <div>${v.tok[p]} jeton(s) de faveur</div>
+    <div class="jetons">${v.tok[p]} jeton(s) de faveur</div>
     <div class="des">${v.dice[p].map((d, k) => de(v, p, d, k)).join('')}</div></section>`;
 }
 
@@ -328,6 +330,7 @@ function render() {
   $('titre').textContent = v.phase === 'deck' ? 'Choix des faveurs' : v.phase === 'draft' ? 'Draft des faveurs'
     : `Manche ${v.manche}${v.sd ? ' (mort subite)' : ''}` + (mode === 'expert' ? `, score ${v.wins[v.me]} à ${v.wins[1 - v.me]}` : '');
   $('jeu').innerHTML = solo ? zone(v) : panneau(v, 1 - v.me, 'Adversaire') + `<div class="zone">${zone(v)}</div>` + panneau(v, v.me, 'Toi');
+  Anim.apres(v, $('jeu'));
 }
 
 /* ================= Actions du joueur ================= */

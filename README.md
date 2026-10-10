@@ -11,7 +11,8 @@ Projet de fan, non affilié à Ubisoft. Les règles sont celles du livret « Orl
 ├── index.html            Menu : Multijoueur, Solo, Tutoriel, Règles, fenêtre des 20 faveurs
 ├── Ressource/
 │   ├── style.css         Styles communs (parchemin, teal, bronze)
-│   └── orlog.js          Moteur de règles, sans affichage (dés, faveurs, résolution)
+│   ├── orlog.js          Moteur de règles, sans affichage (dés, faveurs, résolution)
+│   └── anim.js           Animations : lancer de dés, attaques, défenses, dégâts
 └── Orlog/
     ├── salon.html        Salon : créer ou rejoindre une partie avec un code
     ├── multi.html        Partie multijoueur

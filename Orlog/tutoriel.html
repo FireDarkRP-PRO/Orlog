@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600&family=Cinzel:wght@600;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../Ressource/style.css">
   <script src="../Ressource/orlog.js"></script>
+  <script src="../Ressource/anim.js"></script>
   <style>
     .jeu{max-width:860px}
     .joueur{margin:14px 0;padding:12px;text-align:left;background:var(--parchemin);border:2px solid var(--or)}
@@ -67,12 +68,12 @@ const mk = ks => ks.map((k, i) => ({ i, ...Orlog.DES[i][k], v: false, x: false }
 const FIN = 8;                                   // dernière étape
 const REQ = { 2: [0, 3, 4, 5], 3: [2] };         // dés à garder aux lancers 1 et 2 (scénario du tutoriel)
 
-let etape, S, lock, selKeep, selFav, res;
+let etape, S, lock, selKeep, selFav, res, animer = [], animOpp = false, vu2 = false;
 
 function init() {
   S = { hp: [15, 15], tok: [5, 2], first: 0, manche: 1, mortSubite: false,
         dice: [mk([0, 5, 5, 2, 0, 5]), mk([4, 2, 0, 3, 2, 0])] };   // dés des deux joueurs, scénarisés
-  lock = Array(6).fill(false); selKeep = new Set(); selFav = null; res = null; etape = 0;
+  lock = Array(6).fill(false); selKeep = new Set(); selFav = null; res = null; etape = 0; vu2 = false;
   render();
 }
 
@@ -82,14 +83,14 @@ const nbF = (D, f) => D.filter(d => !d.x && d.f === f).length;
 function de(p, d, k) {
   const libre = p === 0 && (etape === 2 || etape === 3) && !lock[k];
   const cl = ['de', d.g && 'or', p === 0 && etape < 5 && lock[k] && 'fixe', libre && 'libre', libre && REQ[etape].includes(k) && 'conseil', libre && selKeep.has(k) && 'sel'].filter(Boolean).join(' ');
-  return `<button class="${cl}" ${libre ? `onclick="bascule(${k})"` : 'disabled'} title="${NOM[d.f]}${d.g ? ' (jeton)' : ''}">${ico(d.f)}</button>`;
+  return `<button class="${cl}" ${libre ? `onclick="bascule(${k})"` : 'disabled'} ${(p === 0 ? animer.includes(k) : animOpp) ? `data-anim="${d.f}"` : ''} title="${NOM[d.f]}${d.g ? ' (jeton)' : ''}">${ico(d.f)}</button>`;
 }
 
 function panneau(p, nom) {
   const hp = S.hp[p];
   return `<section class="joueur"><div class="entete"><span>${nom}</span></div>
     <div class="pv"><i style="width:${hp / Orlog.PV_MAX * 100}%"></i><span>${hp} PV</span></div>
-    <div>${S.tok[p]} jeton(s) de faveur</div>
+    <div class="jetons">${S.tok[p]} jeton(s) de faveur</div>
     <div class="des">${S.dice[p].map((d, k) => de(p, d, k)).join('')}</div></section>`;
 }
 
@@ -159,7 +160,9 @@ function garder(e, aide) {
 
 function render() {
   $('prog').textContent = `Étape ${etape + 1} sur ${FIN + 1}`;
+  if (etape === 2 && !vu2) { vu2 = true; animer = [0, 1, 2, 3, 4, 5]; animOpp = true; }   // premier lancer
   $('jeu').innerHTML = panneau(1, 'Le Gardien') + `<div class="bulle">${bulle()}</div>` + panneau(0, 'Toi');
+  Anim.lancer($('jeu')); animer = []; animOpp = false;
 }
 
 /* ===== Actions ===== */
@@ -170,14 +173,19 @@ function valider() {                              // verrouille les dés gardés
   selKeep = new Set();
   if (etape === 2) { Object.assign(S.dice[0][1], Orlog.DES[1][2]); Object.assign(S.dice[0][2], Orlog.DES[2][1]); }   // flèche, flèche dorée
   else { Object.assign(S.dice[0][1], Orlog.DES[1][0]); lock = lock.map(() => true); }                                // hache : définitif
+  animer = etape === 2 ? [1, 2] : [1];                                       // dés relancés
   etape++; render();
 }
 
 function bFav(id, t) { selFav = selFav && selFav.id === id && selFav.t === t ? null : { id, t }; render(); }
 
 function resoudre() {                             // vrai moteur : mêmes règles que le jeu en ligne
+  const avant = { hp: [...S.hp], tok: [...S.tok] };
   res = Orlog.resoudre(S, [{ id: 'thor', t: 1, opt: {} }, null]);
   S = res.S; etape = 7; render();
+  const ps = $('jeu').querySelectorAll('.joueur');                          // animation du combat
+  Anim.combat({ panneaux: { 1: ps[0], 0: ps[1] }, dice: S.dice, premier: 0, avant, apres: { hp: S.hp, tok: S.tok },
+    faveurs: [{ p: 0, nom: 'Frappe de Thor (palier 1)' }], fin: false, egalite: false });
 }
 
 init();
