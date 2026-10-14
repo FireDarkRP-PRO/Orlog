@@ -19,12 +19,6 @@
     .pv i{position:absolute;inset:0 auto 0 0;background:var(--teal)}
     .pv span{position:relative;padding-left:8px;color:#fff;font-weight:600}
     .des{display:flex;flex-wrap:wrap;gap:8px;min-height:56px;margin-top:8px}
-    .de{width:52px;height:52px;padding:2px;color:var(--encre);background:#d9c6a0;border:3px solid var(--encre);cursor:default}
-    .de svg{display:block;width:100%;height:100%}
-    .de.or{border:3px dashed var(--or)}
-    .de.virt{border-style:dotted}
-    .de.dead{opacity:.25}
-    .de.fixe{background:#c3b185}
     .de.libre{cursor:pointer}
     .de.sel{outline:3px solid var(--teal);transform:translateY(-4px)}
     .zone{margin:16px 0}
@@ -250,12 +244,12 @@ function de(v, p, d, k) {
   const cl = ['de', d.g && 'or', d.v && 'virt', d.x && 'dead', v.lock[p][k] && v.phase === 'lancer' && 'fixe', (libre || fr) && 'libre', sel && 'sel'].filter(Boolean).join(' ');
   const clic = libre ? `onclick="bascule(${k})"` : fr ? `onclick="bFriggDe(${k})"` : 'disabled';
   const anim = Anim.dePret(v, p, k) ? `data-anim="${d.f}"` : '';
-  return `<button class="${cl}" ${clic} ${anim} title="${NOM[d.f]}${d.g ? ' (jeton)' : ''}">${ico(d.f)}</button>`;
+  return `<button class="${cl}" ${clic} ${anim} title="${NOM[d.f]}${d.g ? ' (jeton)' : ''}">${Anim.cube(d)}</button>`;
 }
 
 function panneau(v, p, nom) {
   const debut = (v.phase === 'lancer' || v.phase === 'faveurs') && v.first === p ? 'Attaque en premier' : '';
-  return `<section class="joueur"><div class="entete"><span>${nom}</span><span>${debut}</span></div>
+  return `<section class="joueur ${p === v.me ? 'moi' : 'adv'}"><div class="entete"><span>${nom}</span><span>${debut}</span></div>
     <div class="pv"><i style="width:${Math.max(0, v.hp[p]) / Orlog.PV_MAX * 100}%"></i><span>${v.hp[p]} PV</span></div>
     <div class="jetons">${v.tok[p]} jeton(s) de faveur</div>
     <div class="des">${v.dice[p].map((d, k) => de(v, p, d, k)).join('')}</div></section>`;

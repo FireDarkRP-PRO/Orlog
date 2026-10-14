@@ -12,7 +12,7 @@ Projet de fan, non affilié à Ubisoft. Les règles sont celles du livret « Orl
 ├── Ressource/
 │   ├── style.css         Styles communs (parchemin, teal, bronze)
 │   ├── orlog.js          Moteur de règles, sans affichage (dés, faveurs, résolution)
-│   └── anim.js           Animations : lancer de dés, attaques, défenses, dégâts
+│   └── anim.js           Dés en 3D (cubes CSS), lancer de dés, attaques, défenses, dégâts
 └── Orlog/
     ├── salon.html        Salon : créer ou rejoindre une partie avec un code
     ├── multi.html        Partie multijoueur

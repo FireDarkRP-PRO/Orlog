@@ -53,3 +53,17 @@ dialog::backdrop{background:rgba(15,46,54,.72)}
 .banniere{position:fixed;z-index:60;padding:8px 18px;color:#e8dcc0;font:600 1.2rem 'Cinzel',Georgia,serif;white-space:nowrap;background:var(--nuit);border:2px solid var(--or);pointer-events:none}
 .pv i{transition:width .3s}
 @media(prefers-reduced-motion:reduce){.de.lance{animation:none}}
+
+/* Jeu en 3D : dés-cubes et table en perspective */
+.de{--demi:26px;position:relative;width:52px;height:52px;padding:0;color:var(--encre);background:none;border:0;cursor:default;perspective:320px}
+.de::after{content:'';position:absolute;left:12%;right:12%;bottom:-7px;height:8px;border-radius:50%;background:rgba(0,0,0,.35);filter:blur(3px)}
+.cube{position:relative;width:100%;height:100%;transform-style:preserve-3d}
+.face{position:absolute;inset:0;padding:3px;color:var(--encre);background:#d9c6a0;border:3px solid var(--encre);backface-visibility:hidden}
+.face svg{display:block;width:100%;height:100%}
+.face.or{border:3px dashed var(--or)}
+.de.virt .face{border-style:dotted}
+.de.dead{opacity:.25}
+.de.fixe .face{background:#c3b185}
+#jeu{perspective:1400px}
+.joueur.adv{transform:rotateX(-5deg)}
+.joueur.moi{transform:rotateX(5deg)}

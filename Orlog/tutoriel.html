@@ -18,10 +18,6 @@
     .pv i{position:absolute;inset:0 auto 0 0;background:var(--teal)}
     .pv span{position:relative;padding-left:8px;color:#fff;font-weight:600}
     .des{display:flex;flex-wrap:wrap;gap:8px;min-height:56px;margin-top:8px}
-    .de{width:52px;height:52px;padding:2px;color:var(--encre);font:900 1.5rem 'Cinzel',serif;background:#d9c6a0;border:3px solid var(--encre);cursor:default}
-    .de svg{display:block;width:100%;height:100%}
-    .de.or{border:3px dashed var(--or)}
-    .de.fixe{background:#c3b185}
     .de.libre{cursor:pointer}
     .de.conseil{box-shadow:0 0 0 4px var(--teal)}
     .de.sel{outline:3px solid var(--nuit);transform:translateY(-4px)}
@@ -83,12 +79,12 @@ const nbF = (D, f) => D.filter(d => !d.x && d.f === f).length;
 function de(p, d, k) {
   const libre = p === 0 && (etape === 2 || etape === 3) && !lock[k];
   const cl = ['de', d.g && 'or', p === 0 && etape < 5 && lock[k] && 'fixe', libre && 'libre', libre && REQ[etape].includes(k) && 'conseil', libre && selKeep.has(k) && 'sel'].filter(Boolean).join(' ');
-  return `<button class="${cl}" ${libre ? `onclick="bascule(${k})"` : 'disabled'} ${(p === 0 ? animer.includes(k) : animOpp) ? `data-anim="${d.f}"` : ''} title="${NOM[d.f]}${d.g ? ' (jeton)' : ''}">${ico(d.f)}</button>`;
+  return `<button class="${cl}" ${libre ? `onclick="bascule(${k})"` : 'disabled'} ${(p === 0 ? animer.includes(k) : animOpp) ? `data-anim="${d.f}"` : ''} title="${NOM[d.f]}${d.g ? ' (jeton)' : ''}">${Anim.cube(d)}</button>`;
 }
 
 function panneau(p, nom) {
   const hp = S.hp[p];
-  return `<section class="joueur"><div class="entete"><span>${nom}</span></div>
+  return `<section class="joueur ${p === 0 ? 'moi' : 'adv'}"><div class="entete"><span>${nom}</span></div>
     <div class="pv"><i style="width:${hp / Orlog.PV_MAX * 100}%"></i><span>${hp} PV</span></div>
     <div class="jetons">${S.tok[p]} jeton(s) de faveur</div>
     <div class="des">${S.dice[p].map((d, k) => de(p, d, k)).join('')}</div></section>`;

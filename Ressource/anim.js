@@ -1,5 +1,5 @@
 /* ORLOG - animations (Web Animations API, sans dépendance).
-   - lancer : les dés (re)lancés tournent et changent de face avant de se poser ;
+   - dés 3D : chaque dé est un cube CSS 3D aux vraies faces ; lancer : les dés (re)lancés roulent avant de se poser ;
    - combat : haches et flèches volent vers l'adversaire, les casques et boucliers bloquent,
      les PV baissent coup par coup, les jetons, soins et faveurs s'affichent en bulles.
    Purement visuel : l'état du jeu est déjà à jour, ces animations ne font que le raconter.
@@ -20,20 +20,27 @@ const Anim = (() => {
     return a;
   }
 
-  function lancer(racine) {
-    if (reduit) { racine.querySelectorAll('[data-anim]').forEach(b => b.removeAttribute('data-anim')); return; }
+  // Dé 3D : un cube CSS dont les 6 faces sont celles du vrai dé (voir DES dans orlog.js).
+  // Le cube est tourné pour présenter la face obtenue au joueur.
+  const PLACE = ['rotateY(0deg)', 'rotateY(180deg)', 'rotateY(90deg)', 'rotateY(-90deg)', 'rotateX(90deg)', 'rotateX(-90deg)'];                   // position de chaque face
+  const ORI = ['rotateX(0deg) rotateY(0deg)', 'rotateX(0deg) rotateY(180deg)', 'rotateX(0deg) rotateY(-90deg)', 'rotateX(0deg) rotateY(90deg)',
+               'rotateX(-90deg) rotateY(0deg)', 'rotateX(90deg) rotateY(0deg)'];                                                                    // rotation qui l'amène devant
+  function cube(d) {
+    const faces = d.i >= 0 ? Orlog.DES[d.i] : Array(6).fill({ f: d.f, g: false });                                                              // dé ajouté par une faveur : une seule face
+    const j = Math.max(0, faces.findIndex(x => x.f === d.f && x.g === d.g));
+    return `<div class="cube" style="transform:${ORI[j]}">` + faces.map((x, n) =>
+      `<div class="face${x.g ? ' or' : ''}" style="transform:${PLACE[n]} translateZ(var(--demi))"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#ic-${x.f}"/></svg></div>`).join('') + '</div>';
+  }
+
+  function lancer(racine) {                                         // les dés (re)lancés sont jetés, roulent, puis se posent sur la bonne face
     racine.querySelectorAll('[data-anim]').forEach((b, i) => {
-      const fin = b.dataset.anim, use = b.querySelector('use'), delai = (i % 6) * 70;
       b.removeAttribute('data-anim');
-      use.setAttribute('href', '#ic-' + FACES[Math.floor(Math.random() * 5)]);
+      const c = b.querySelector('.cube'), m = c && c.style.transform.match(/rotateX\((-?\d+)deg\) rotateY\((-?\d+)deg\)/);
+      if (reduit || !m) return;
+      const rx = +m[1], ry = +m[2], delai = (i % 6) * 70, tours = () => 360 * (2 + Math.floor(Math.random() * 2));
       b.classList.add('lance'); b.style.animationDelay = delai + 'ms';
-      setTimeout(() => {
-        let n = 0;
-        const t = setInterval(() => {
-          use.setAttribute('href', '#ic-' + (++n >= 7 ? fin : FACES[Math.floor(Math.random() * 5)]));
-          if (n >= 7) clearInterval(t);
-        }, 80);
-      }, delai);
+      c.animate([{ transform: `rotateX(${rx + tours()}deg) rotateY(${ry + tours()}deg)` }, { transform: `rotateX(${rx}deg) rotateY(${ry}deg)` }],
+        { duration: 900, delay: delai, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'backwards' });
     });
   }
 
@@ -158,5 +165,5 @@ const Anim = (() => {
       fin: v.fin !== null, egalite: v.sd && !snap.sd });
   }
 
-  return { dePret, lancer, combat, apres, relier };
+  return { dePret, cube, lancer, combat, apres, relier };
 })();
